@@ -1,0 +1,20 @@
+[
+  {"category": "Столицы государств", "items": [{"label": "Канберра", "ok": true}, {"label": "Сидней", "ok": false}, {"label": "Астана", "ok": true}, {"label": "Стамбул", "ok": false}]},
+  {"category": "Острова", "items": [{"label": "Бали", "ok": true}, {"label": "Крит", "ok": true}, {"label": "Андорра", "ok": false}, {"label": "Шри-Ланка", "ok": true}]},
+  {"category": "Фильмы Кристофера Нолана", "items": [{"label": "«Интерстеллар»", "ok": true}, {"label": "«Дюна»", "ok": false}, {"label": "«Престиж»", "ok": true}, {"label": "«Матрица»", "ok": false}]},
+  {"category": "Игровые серии Nintendo", "items": [{"label": "The Legend of Zelda", "ok": true}, {"label": "Halo", "ok": false}, {"label": "Metroid", "ok": true}, {"label": "Uncharted", "ok": false}]},
+  {"category": "Млекопитающие", "items": [{"label": "Дельфин", "ok": true}, {"label": "Акула", "ok": false}, {"label": "Летучая мышь", "ok": true}, {"label": "Пингвин", "ok": false}]},
+  {"category": "Страны Южной Америки", "items": [{"label": "Перу", "ok": true}, {"label": "Мексика", "ok": false}, {"label": "Чили", "ok": true}, {"label": "Куба", "ok": false}]},
+  {"category": "Планеты-гиганты", "items": [{"label": "Юпитер", "ok": true}, {"label": "Марс", "ok": false}, {"label": "Нептун", "ok": true}, {"label": "Венера", "ok": false}]},
+  {"category": "Персонажи Marvel", "items": [{"label": "Танос", "ok": true}, {"label": "Бэтмен", "ok": false}, {"label": "Локи", "ok": true}, {"label": "Джокер", "ok": false}]},
+  {"category": "Страны, где платят евро", "items": [{"label": "Италия", "ok": true}, {"label": "Польша", "ok": false}, {"label": "Хорватия", "ok": true}, {"label": "Чехия", "ok": false}]},
+  {"category": "Города на море", "items": [{"label": "Анталья", "ok": true}, {"label": "Алматы", "ok": false}, {"label": "Барселона", "ok": true}, {"label": "Мадрид", "ok": false}]},
+  {"category": "Цитрусовые", "items": [{"label": "Лайм", "ok": true}, {"label": "Киви", "ok": false}, {"label": "Помело", "ok": true}, {"label": "Манго", "ok": false}]},
+  {"category": "Игры в жанре хоррор", "items": [{"label": "Silent Hill", "ok": true}, {"label": "FIFA", "ok": false}, {"label": "Outlast", "ok": true}, {"label": "Tetris", "ok": false}]},
+  {"category": "Фильмы с Леонардо ДиКаприо", "items": [{"label": "«Начало»", "ok": true}, {"label": "«Бойцовский клуб»", "ok": false}, {"label": "«Остров проклятых»", "ok": true}, {"label": "«Матрица»", "ok": false}]},
+  {"category": "Страны без выхода к морю", "items": [{"label": "Монголия", "ok": true}, {"label": "Непал", "ok": true}, {"label": "Вьетнам", "ok": false}, {"label": "Швейцария", "ok": true}]},
+  {"category": "Металлы", "items": [{"label": "Железо", "ok": true}, {"label": "Неон", "ok": false}, {"label": "Натрий", "ok": true}, {"label": "Сера", "ok": false}]},
+  {"category": "Авиакомпании Ближнего Востока", "items": [{"label": "Emirates", "ok": true}, {"label": "Qatar Airways", "ok": true}, {"label": "Lufthansa", "ok": false}, {"label": "Etihad", "ok": true}]},
+  {"category": "Мультфильмы Pixar", "items": [{"label": "«Тачки»", "ok": true}, {"label": "«Шрек»", "ok": false}, {"label": "«В поисках Немо»", "ok": true}, {"label": "«Мадагаскар»", "ok": false}]},
+  {"category": "Достопримечательности Рима", "items": [{"label": "Колизей", "ok": true}, {"label": "Пантеон", "ok": true}, {"label": "Акрополь", "ok": false}, {"label": "Биг-Бен", "ok": false}]}
+]

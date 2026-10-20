@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Последний чек-ин</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🛎️%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#0e0809">
+<link rel="preload" as="image" href="/media/bg_lobby.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yeseva+One&family=Rubik:wght@400;500;700&display=swap&subset=cyrillic" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0809; --panel:rgba(20,12,14,.84); --panel-2:rgba(43,26,30,.82); --line:rgba(214,178,110,.22); --line-2:#3b262b;
+  --brass:#d6b26e; --brass-2:#a8854a; --ink:#f4ebde; --muted:#b6a397;
+  --blood:#d0233f; --ghost:#8fe6d3; --ok:#63c983;
+  --r:14px; --shadow:0 18px 50px rgba(0,0,0,.55);
+  --font-display:"Yeseva One", Georgia, serif;
+  --font:"Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --stage-w:min(560px, 44vw);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+html,body{min-height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit;color:inherit}
+img{display:block}
+.hidden{display:none!important}
+
+/* ---------- фон-сцена ---------- */
+#bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:#0b0607}
+.bgl{position:absolute;inset:-3%;background-size:cover;background-position:var(--pos,center);opacity:0;transition:opacity 1.2s ease;
+  animation:drift 40s ease-in-out infinite alternate}
+.bgl.on{opacity:1}
+@keyframes drift{from{transform:scale(1) translate(0,0)}to{transform:scale(1.06) translate(-1.2%,-.8%)}}
+#bgShade{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg, rgba(8,4,5,.05) 0%, rgba(8,4,5,.15) 45%, rgba(8,4,5,.72) 72%, rgba(8,4,5,.88) 100%),
+             radial-gradient(ellipse at 50% 120%, rgba(0,0,0,.6), transparent 60%)}
+#bgFlicker{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1s;
+  background:radial-gradient(circle at var(--fx,12%) var(--fy,40%), rgba(255,180,90,.22), transparent 28%);mix-blend-mode:screen;animation:candle 2.6s infinite}
+#bgFlicker.on{opacity:1}
+@keyframes candle{0%,100%{filter:brightness(1)}30%{filter:brightness(1.25)}55%{filter:brightness(.85)}70%{filter:brightness(1.15)}}
+.dust{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(255,220,170,.5);filter:blur(.5px);animation:dust linear infinite;opacity:0}
+@keyframes dust{0%{transform:translate(0,0);opacity:0}15%{opacity:.8}85%{opacity:.6}100%{transform:translate(40px,-160px);opacity:0}}
+@media (max-width:899px){
+  #bgShade{background:linear-gradient(180deg, rgba(8,4,5,.62) 0%, rgba(8,4,5,.55) 55%, rgba(8,4,5,.25) 100%)}
+}
+
+/* ---------- раскладка ---------- */
+.app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:14px 16px 18px;gap:12px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1500px;width:100%;margin:0 auto}
+.brand{font-family:var(--font-display);font-size:21px;letter-spacing:.5px;color:var(--brass);text-shadow:0 2px 12px rgba(0,0,0,.8)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
+  font-size:13px;color:var(--muted);white-space:nowrap;backdrop-filter:blur(6px)}
+.chip b{color:var(--ink);letter-spacing:2px}
+.main{flex:1;max-width:1500px;width:100%;margin:0 auto;display:grid;grid-template-columns:1fr var(--stage-w);gap:22px;min-height:0}
+.scene{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:0}
+.hostStage{position:relative;flex:1;min-height:0}
+#hostBig{position:absolute;bottom:0;right:6%;height:min(100%, 760px);max-width:92%;object-fit:contain;object-position:bottom right;
+  filter:drop-shadow(0 0 40px rgba(0,0,0,.6));opacity:0;transform:translateY(30px);transition:opacity .6s ease, transform .6s ease}
+#hostBig.on{opacity:1;transform:none}
+.uicol{display:flex;flex-direction:column;min-height:0}
+@media (max-width:899px){
+  .main{grid-template-columns:1fr;gap:12px}
+  .uicol{order:1}.scene{order:2}
+  .hostStage{display:none}
+}
+
+/* ---------- панель меню ---------- */
+.stage{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px 18px 24px;box-shadow:var(--shadow);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);overflow:hidden}
+@media (min-width:900px){.stage{max-height:calc(100vh - 86px);overflow-y:auto;padding:28px 30px 30px}}
+.stage::before,.stage::after{content:"";position:absolute;width:26px;height:26px;border:2px solid var(--brass-2);pointer-events:none;opacity:.8}
+.stage::before{top:9px;left:9px;border-right:0;border-bottom:0;border-top-left-radius:8px}
+.stage::after{bottom:9px;right:9px;border-left:0;border-top:0;border-bottom-right-radius:8px}
+.timer{height:6px;border-radius:999px;background:rgba(0,0,0,.5);border:1px solid var(--line-2);overflow:hidden;margin:-4px 0 18px}
+.timer i{display:block;height:100%;width:100%;background:linear-gradient(90deg, var(--blood), var(--brass));transform-origin:left}
+.kicker{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--brass);display:flex;justify-content:space-between;gap:10px;margin-bottom:10px}
+.kicker span:last-child{color:var(--muted);letter-spacing:1px;text-transform:none;font-variant-numeric:tabular-nums}
+h1.big{font-family:var(--font-display);font-weight:400;font-size:clamp(26px,5.6vw,42px);line-height:1.1;margin-bottom:12px}
+h2.q{font-family:var(--font-display);font-weight:400;font-size:clamp(21px,4.4vw,31px);line-height:1.22;margin-bottom:18px}
+.lead{color:var(--muted);font-size:15.5px;max-width:60ch}
+.host-line{display:flex;gap:12px;align-items:center;margin-top:18px;padding:12px 14px;border-radius:var(--r);
+  background:rgba(214,178,110,.08);border:1px dashed rgba(214,178,110,.35);font-style:italic;color:#ecdcc0}
+.host-line .bust{flex:none;width:58px;height:58px;border-radius:50%;object-fit:cover;object-position:50% 6%;background:#1a0f12;border:1px solid var(--brass-2)}
+@media (min-width:900px){.host-line .bust{display:none}}
+
+/* кнопки */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:0 22px;border-radius:var(--r);
+  font-weight:700;letter-spacing:.3px;transition:transform .08s, filter .15s, opacity .15s}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn-primary{background:linear-gradient(180deg, #e9c983, var(--brass-2));color:#22150c;box-shadow:0 6px 22px rgba(214,178,110,.28)}
+.btn-primary:hover:not([disabled]){filter:brightness(1.08)}
+.btn-ghost{border:1px solid var(--line);background:var(--panel-2)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
+.btn.wide{width:100%}
+
+/* варианты ответов */
+.opts{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:600px){.opts{grid-template-columns:1fr 1fr}}
+.opt{position:relative;display:flex;align-items:center;gap:12px;text-align:left;min-height:62px;padding:11px 13px;border-radius:var(--r);
+  background:var(--panel-2);border:1px solid var(--line-2);font-size:16.5px;font-weight:500;transition:border-color .15s, background .15s, transform .08s}
+.opt:hover:not([disabled]){border-color:var(--brass-2)}
+.opt .letter{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-family:var(--font-display);
+  background:rgba(0,0,0,.45);border:1px solid var(--line-2);color:var(--brass)}
+.opt[disabled]{cursor:default}
+.opt.mine{border-color:var(--brass);background:rgba(214,178,110,.14)}
+.opt.dim{opacity:.45}
+.opt.right{border-color:var(--ok);background:rgba(99,201,131,.16)}
+.opt.wrong{border-color:var(--blood);background:rgba(208,35,63,.14)}
+.opt .who{margin-left:auto;display:flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
+.opt .who .av{width:28px;height:28px}
+.status{margin-top:14px;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.notice{margin-top:14px;padding:12px 14px;border-radius:var(--r);background:rgba(143,230,211,.08);border:1px solid rgba(143,230,211,.3);color:var(--ghost);font-size:14px}
+.notice.red{background:rgba(208,35,63,.12);border-color:rgba(208,35,63,.45);color:#ffa3b1}
+
+/* аватары-портреты */
+.av{position:relative;flex:none;width:42px;height:42px;border-radius:50%;background:#140c0e;box-shadow:0 0 0 2px var(--c,#555), 0 3px 8px rgba(0,0,0,.5)}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.av.tv{display:inline-grid;place-items:center;font-size:20px}
+.av.ghost{box-shadow:0 0 0 2px var(--ghost), 0 0 14px rgba(143,230,211,.45)}
+.av.ghost img{filter:grayscale(1) sepia(1) hue-rotate(125deg) saturate(2.2) brightness(1.05);opacity:.72}
+.av.ghost::after{content:"👻";position:absolute;right:-6px;bottom:-6px;font-size:14px}
+.av.lg{width:66px;height:66px}
+.av.xl{width:120px;height:120px}
+
+/* игроки */
+.plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.scene .plist{padding:12px;border-radius:18px;background:rgba(12,7,8,.55);border:1px solid var(--line);backdrop-filter:blur(6px)}
+.pl{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:12px;background:rgba(43,26,30,.7);border:1px solid transparent;min-width:0}
+.pl.me{border-color:rgba(214,178,110,.55)}
+.pl.off{opacity:.45}
+.pl .nm{min-width:0;flex:1}
+.pl .nm b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .nm small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.pl .tick{font-size:14px;color:var(--ok);flex:none}
+.pl.dead .nm b{color:var(--ghost)}
+body.ph-lobby .scene .plist, body.ph-intro .scene .plist{display:none}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin-top:10px}
+.link{color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-size:13px}
+
+/* лобби */
+.code-big{font-family:var(--font-display);font-size:clamp(46px,11vw,84px);letter-spacing:10px;color:var(--brass);line-height:1;
+  text-shadow:0 0 30px rgba(214,178,110,.35);margin:4px 0 14px}
+.share{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.share code{flex:1;min-width:0;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.45);border:1px solid var(--line-2);font-size:14px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.book{margin:14px 0 16px;padding:12px;border-radius:16px;background:rgba(0,0,0,.28);border:1px solid var(--line-2)}
+.book h3{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--brass);font-weight:500;margin-bottom:10px}
+.book .row{display:flex;flex-wrap:wrap;gap:12px}
+.book .g{display:flex;flex-direction:column;align-items:center;gap:5px;width:70px;font-size:12.5px;text-align:center}
+.book .g span{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rules{display:grid;gap:8px;margin:14px 0}
+.rule{display:flex;gap:10px;align-items:flex-start;color:#dccdbd;font-size:14.5px}
+.rule span{flex:none;font-size:19px}
+
+/* стартовый экран */
+.home h1{font-family:var(--font-display);font-weight:400;font-size:clamp(34px,7vw,50px);color:var(--brass);line-height:1.05;margin:4px 0 8px}
+.home p{color:var(--muted);margin-bottom:18px}
+.field{display:block;width:100%;min-height:54px;padding:0 16px;border-radius:var(--r);background:rgba(0,0,0,.5);border:1px solid var(--line-2);font-size:18px;outline:none;transition:border-color .15s}
+.field:focus{border-color:var(--brass)}
+.field.code{text-transform:uppercase;letter-spacing:8px;text-align:center;font-family:var(--font-display);font-size:24px}
+.form{display:grid;gap:10px}
+.form label{font-size:13px;color:var(--muted);margin-top:4px}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin:6px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line-2)}
+.check{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px;margin-top:4px}
+.check input{width:20px;height:20px;accent-color:var(--brass)}
+.err{color:#ff8b9b;min-height:22px;font-size:14px;margin-top:4px}
+
+/* испытания */
+.trialimg{width:100%;aspect-ratio:16/8;object-fit:cover;border-radius:16px;border:1px solid var(--line);margin-bottom:16px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.condemned{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.condemned .who{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px;max-width:84px;text-align:center}
+.picks{display:grid;gap:12px;grid-template-columns:repeat(3,1fr);margin-top:8px}
+.picks.floors{grid-template-columns:repeat(4,1fr)}
+.pickbtn{position:relative;min-height:108px;border-radius:18px;background:var(--panel-2);border:1px solid var(--line-2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:42px;transition:transform .1s, border-color .15s}
+.pickbtn small{font-size:13px;color:var(--muted)}
+.pickbtn:hover:not([disabled]){border-color:var(--brass);transform:translateY(-2px)}
+.pickbtn.mine{border-color:var(--brass);background:rgba(214,178,110,.16)}
+.pickbtn.bad{border-color:var(--blood);background:rgba(208,35,63,.2)}
+.pickbtn[disabled]{cursor:default}
+.pickbtn .who{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;min-height:26px}
+.pickbtn .who .av{width:26px;height:26px}
+.floors .pickbtn{min-height:82px;font-size:30px;font-family:var(--font-display)}
+.memo{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:22px 0}
+.memo div{width:min(14vw,74px);height:min(14vw,74px);display:grid;place-items:center;font-size:min(8.5vw,44px);border-radius:16px;
+  background:var(--panel-2);border:1px solid var(--line-2);position:relative}
+.memo div small{position:absolute;top:4px;left:7px;font-size:11px;color:var(--muted);font-family:var(--font)}
+.memo div.hit{border-color:var(--ok);background:rgba(99,201,131,.16)}
+.math{display:grid;gap:12px;justify-items:center;margin-top:6px}
+.math .ex{font-family:var(--font-display);font-size:clamp(44px,12vw,78px);line-height:1}
+.math form{display:flex;gap:8px;width:100%;max-width:340px}
+.math input{flex:1;min-width:0;text-align:center;font-size:26px}
+.math .fb{height:22px;font-size:14px}
+.scoreboard{display:grid;gap:8px;margin-top:16px}
+.sbrow{display:flex;align-items:center;gap:10px}
+.sbrow .bar{flex:1;height:12px;border-radius:999px;background:rgba(0,0,0,.45);overflow:hidden;border:1px solid var(--line-2)}
+.sbrow .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brass-2),var(--brass))}
+.sbrow b{width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.deadlist{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+.deadlist .who{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:14px}
+.stamp{display:inline-block;margin-top:10px;padding:6px 14px;border:2px solid var(--blood);color:#ff8b9b;border-radius:8px;font-family:var(--font-display);letter-spacing:2px;transform:rotate(-3deg)}
+.stamp.ok{border-color:var(--ok);color:var(--ok)}
+
+/* финал */
+.track{margin-top:18px;padding:14px 10px 10px;border-radius:16px;background:rgba(0,0,0,.45);border:1px solid var(--line-2);overflow:hidden}
+.track .cells{display:grid;gap:3px}
+.track .cell{position:relative;min-height:60px;border-radius:8px;background:repeating-linear-gradient(180deg,rgba(60,34,40,.8) 0 6px,rgba(46,26,30,.8) 6px 12px);
+  display:flex;flex-direction:column-reverse;align-items:center;gap:2px;padding:4px 0}
+.track .cell .n{position:absolute;bottom:-1px;left:4px;font-size:10px;color:#7a6560}
+.track .cell.door{background:linear-gradient(180deg,#f3d39a,#8a5a26);border:1px solid var(--brass);justify-content:center;font-size:22px;flex-direction:column;box-shadow:0 0 18px rgba(255,200,120,.45)}
+.track .cell .av{width:24px;height:24px}
+.track .cell .av::after{display:none}
+.track .legend{margin-top:8px;font-size:12px;color:var(--muted);text-align:center}
+.fitems{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.fitem{min-height:68px;border-radius:var(--r);background:var(--panel-2);border:1px solid var(--line-2);padding:10px 12px;font-weight:500;font-size:16px;
+  display:flex;align-items:center;justify-content:center;text-align:center;gap:8px;transition:border-color .12s, background .12s}
+.fitem.on{border-color:var(--brass);background:rgba(214,178,110,.18)}
+.fitem.yes{border-color:var(--ok);background:rgba(99,201,131,.16)}
+.fitem.no{border-color:var(--blood);background:rgba(208,35,63,.12);opacity:.85}
+.moves{display:grid;gap:6px;margin-top:16px}
+.moves .mv{display:flex;align-items:center;gap:10px;font-size:15px}
+.moves .mv b{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--brass)}
+
+/* итоги */
+.winner{text-align:center;padding:4px 0}
+.winner .portrait{width:min(240px,60%);aspect-ratio:1;margin:6px auto 14px;border-radius:20px;overflow:hidden;border:2px solid var(--brass);
+  box-shadow:0 0 0 6px rgba(214,178,110,.15), 0 0 60px rgba(255,200,120,.35)}
+.winner .portrait img{width:100%;height:100%;object-fit:cover}
+.rank{display:grid;gap:8px;margin-top:16px}
+.rank .r{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:12px;background:var(--panel-2)}
+.rank .r .place{width:28px;font-family:var(--font-display);color:var(--brass);font-size:20px;text-align:center}
+.rank .r small{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+
+/* ---------- катсцены ---------- */
+#cine{position:fixed;inset:0;z-index:50;background:#000;opacity:0;pointer-events:none;transition:opacity .45s ease}
+#cine.on{opacity:1;pointer-events:auto}
+#cine .shot{position:absolute;inset:0;opacity:0;transition:opacity .5s ease}
+#cine .shot.on{opacity:1}
+#cine .shot img,#cine .shot video{width:100%;height:100%;object-fit:cover}
+#cine .shot img.kb{animation:kb var(--kbd,4s) ease-out forwards}
+@keyframes kb{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.14) translate(-1.5%,-1%)}}
+#cine .bar{position:absolute;left:0;right:0;height:9vh;background:#000;z-index:3}
+#cine .bar.t{top:0}#cine .bar.b{bottom:0}
+#cine .cap{position:absolute;left:50%;bottom:13vh;transform:translateX(-50%);z-index:4;width:min(900px,90vw);text-align:center;
+  font-family:var(--font-display);font-size:clamp(20px,3.4vw,34px);line-height:1.25;color:#fff3df;text-shadow:0 2px 14px #000, 0 0 2px #000}
+#cine .skip{position:absolute;right:16px;top:calc(9vh + 12px);z-index:5;padding:8px 14px;border-radius:999px;background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.25);color:#ddd;font-size:13px}
+#cine .flash{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0}
+#cine.fx-slam .flash{background:#fff;animation:flash .5s ease-out}
+#cine.fx-slam .shot.on{animation:shake .5s}
+#cine.fx-death .flash{background:radial-gradient(circle, rgba(208,35,63,.15), rgba(140,0,20,.75));animation:flash 1.4s ease-out}
+#cine.fx-death .shot.on{animation:shake .6s .1s}
+#cine.fx-revive .flash{background:radial-gradient(circle at 60% 55%, rgba(255,215,140,.9), rgba(143,230,211,.35) 45%, transparent 75%);animation:flash 1.8s ease-out}
+#cine.fx-dawn .shot.on img{animation:kb var(--kbd,4s) ease-out forwards, dawn var(--kbd,4s) ease-in forwards}
+@keyframes dawn{from{filter:brightness(.55)}to{filter:brightness(1.12)}}
+@keyframes flash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+@keyframes shake{10%,50%,90%{transform:translate(-8px,3px)}30%,70%{transform:translate(8px,-3px)}}
+
+.banner{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:60;padding:10px 16px;border-radius:999px;background:#3a1018;border:1px solid var(--blood);color:#ffd0d7;font-size:14px;box-shadow:var(--shadow)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;padding:12px 18px;border-radius:12px;background:#2a191d;border:1px solid var(--line);font-size:14px;box-shadow:var(--shadow);max-width:90vw;text-align:center}
+.fade-in{animation:fade .35s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.shake{animation:shake .4s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="ph-home">
+<div id="bg">
+  <div class="bgl" id="bgA"></div><div class="bgl" id="bgB"></div>
+  <div id="bgFlicker"></div>
+  <div id="bgShade"></div>
+</div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">Последний чек-ин</div>
+    <div id="roomchip" class="chip hidden">Комната <b id="roomcode"></b></div>
+  </div>
+
+  <div class="main">
+    <section class="scene">
+      <div class="hostStage"><img id="hostBig" alt=""></div>
+      <div class="plist hidden" id="plist"></div>
+    </section>
+
+    <section class="uicol">
+      <!-- Стартовый экран -->
+      <div id="home" class="stage home hidden">
+        <h1>Последний чек-ин</h1>
+        <p>Викторина на выживание в отеле, из которого выезжают не все. Отвечай правильно или отправляйся в подвал.</p>
+        <div class="form">
+          <label for="name">Как записать тебя в книгу постояльцев?</label>
+          <input id="name" class="field" maxlength="16" autocomplete="nickname" placeholder="Имя">
+          <label for="code">Код комнаты</label>
+          <input id="code" class="field code" maxlength="4" autocomplete="off" autocapitalize="characters" placeholder="ABCD">
+          <label class="check"><input type="checkbox" id="spectator"> Только смотреть (для общего экрана или проектора)</label>
+          <button id="joinBtn" class="btn btn-primary wide" style="margin-top:8px">Войти в комнату</button>
+          <div class="or" id="orLine">или</div>
+          <button id="createBtn" class="btn btn-ghost wide">Создать новую комнату</button>
+          <div id="homeErr" class="err"></div>
+        </div>
+      </div>
+
+      <!-- Игра -->
+      <div id="game" class="hidden">
+        <div class="stage">
+          <div class="timer hidden" id="timer"><i id="timerBar"></i></div>
+          <div id="stage"></div>
+        </div>
+        <div class="foot">
+          <span id="meLine"></span>
+          <button class="link" id="leaveBtn">Выйти из комнаты</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="cine">
+  <div id="shots"></div>
+  <div class="flash"></div>
+  <div class="bar t"></div><div class="bar b"></div>
+  <div class="cap" id="cineCap"></div>
+  <button class="skip" id="cineSkip">Пропустить ›</button>
+</div>
+<div id="banner" class="banner hidden">Связь потеряна, переподключаюсь…</div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const LS_KEY = 'checkin_session_v1';
+  const LETTERS = ['A', 'B', 'C', 'D'];
+  const M = (f) => `/media/${f}`;
+  const isPortrait = () => window.matchMedia('(max-width:899px)').matches;
+
+  let session = null, S = null, offset = 0, es = null, failCount = 0;
+  let lastStageKey = '', lastStageHTML = '', lastPlistHTML = '';
+  let finaleDraft = new Set(), finaleDraftKey = '';
+  let phaseKey = '', phaseStart = 0;
+
+  // ---------- утилиты ----------
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) {} };
+  const money = (n) => `${Number(n).toLocaleString('ru-RU')} 🪙`;
+  const serverNow = () => Date.now() + offset;
+
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 2600);
+  }
+  async function api(what, body) {
+    try {
+      const r = await fetch('/api/' + what, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok && !j.error) j.error = 'Ошибка связи';
+      return j;
+    } catch (e) { return { error: 'Нет связи с сервером' }; }
+  }
+  async function act(type, extra) {
+    if (!session) return {};
+    const res = await api('action', { room: session.room, pid: session.pid, type, ...(extra || {}) });
+    if (res.error && res.error !== 'wrong') toast(res.error);
+    return res;
+  }
+
+  // ---------- предзагрузка медиа ----------
+  const IMAGES = ['bg_lobby', 'bg_lobby_mobile', 'bg_quiz', 'bg_basement', 'bg_finale', 'bg_morning',
+    'cs_intro_2', 'cs_intro_3', 'cs_death', 'cs_revive', 'cs_dawn', 'cs_escape', 'cs_intro_1',
+    'host_base', 'host_welcome', 'host_grin', 'host_point', 'host_clap',
+    'trial_glass', 'trial_elevator', 'trial_math', 'trial_memory',
+    ...Array.from({ length: 15 }, (_, i) => `guest_${i + 1}`)].map((n) => M(n + '.webp'));
+  const videos = {};
+  let preloaded = false;
+  function preload() {
+    if (preloaded) return; preloaded = true;
+    IMAGES.forEach((src) => { const i = new Image(); i.decoding = 'async'; i.src = src; });
+    ['intro_scene', 'escape_cutscene'].forEach((n) => {
+      const v = document.createElement('video');
+      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = M(n + '.mp4');
+      v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+      v.load(); videos[n] = v;
+    });
+  }
+
+  // ---------- фон ----------
+  const BG = {
+    lobby: { d: 'bg_lobby', m: 'bg_lobby_mobile', pos: '0% 50%', flick: ['8%', '46%'] },
+    quiz: { d: 'bg_quiz', pos: '66% 50%' },
+    basement: { d: 'bg_basement', pos: '62% 50%' },
+    finale: { d: 'bg_finale', pos: '50% 50%' },
+    morning: { d: 'bg_morning', pos: '58% 50%' },
+  };
+  let bgCur = '', bgFlip = false;
+  function setBg(name) {
+    const b = BG[name]; if (!b) return;
+    const file = isPortrait() && b.m ? b.m : b.d;
+    const key = name + file;
+    if (key === bgCur) return; bgCur = key;
+    const next = bgFlip ? $('bgA') : $('bgB'), prev = bgFlip ? $('bgB') : $('bgA');
+    bgFlip = !bgFlip;
+    next.style.backgroundImage = `url(${M(file + '.webp')})`;
+    next.style.setProperty('--pos', isPortrait() ? (b.m ? '50% 100%' : b.pos) : b.pos);
+    next.classList.add('on'); prev.classList.remove('on');
+    const fl = $('bgFlicker');
+    if (b.flick && !isPortrait()) { fl.style.setProperty('--fx', b.flick[0]); fl.style.setProperty('--fy', b.flick[1]); fl.classList.add('on'); }
+    else if (b.flick && isPortrait()) { fl.style.setProperty('--fx', '22%'); fl.style.setProperty('--fy', '74%'); fl.classList.add('on'); }
+    else fl.classList.remove('on');
+  }
+  window.addEventListener('resize', () => { const n = bgCur.replace(/bg_.*/, ''); bgCur = ''; if (n) setBg(n); });
+  (function dust() {
+    const bg = $('bg');
+    for (let i = 0; i < 18; i++) {
+      const d = document.createElement('i'); d.className = 'dust';
+      d.style.left = Math.random() * 100 + '%'; d.style.top = 30 + Math.random() * 70 + '%';
+      d.style.animationDuration = 9 + Math.random() * 10 + 's'; d.style.animationDelay = -Math.random() * 15 + 's';
+      bg.insertBefore(d, $('bgShade'));
+    }
+  })();
+
+  // ---------- портье ----------
+  let hostCur = '';
+  function setHost(pose) {
+    const h = $('hostBig');
+    if (pose === hostCur) return; hostCur = pose;
+    if (!pose) { h.classList.remove('on'); return; }
+    h.classList.remove('on');
+    const src = M(`host_${pose}.webp`);
+    setTimeout(() => { h.src = src; h.onload = () => h.classList.add('on'); if (h.complete) h.classList.add('on'); }, 250);
+  }
+
+  // ---------- катсцены ----------
+  let cineTimers = [], cineKey = '';
+  function cineStop() {
+    cineTimers.forEach(clearTimeout); cineTimers = [];
+    const c = $('cine'); c.classList.remove('on', 'fx-slam', 'fx-death', 'fx-revive', 'fx-dawn');
+    Object.values(videos).forEach((v) => { try { v.pause(); } catch (e) {} });
+    setTimeout(() => { if (!c.classList.contains('on')) $('shots').innerHTML = ''; }, 500);
+  }
+  $('cineSkip').onclick = cineStop;
+  function typeText(el, text) {
+    el.textContent = '';
+    let i = 0;
+    const step = () => { el.textContent = text.slice(0, ++i); if (i < text.length) cineTimers.push(setTimeout(step, 28)); };
+    if (text) step();
+  }
+  // shots: [{img|video, dur(мс), cap, fx}] ; elapsed: сколько уже прошло с начала фазы
+  function playCine(key, shots, elapsed) {
+    if (key === cineKey) return; cineKey = key;
+    cineStop();
+    let t = 0, first = -1, inShot = 0;
+    for (let i = 0; i < shots.length; i++) { if (elapsed < t + shots[i].dur) { first = i; inShot = Math.max(0, elapsed - t); break; } t += shots[i].dur; }
+    if (first < 0) return;
+    const c = $('cine'), box = $('shots');
+    box.innerHTML = '';
+    c.classList.add('on');
+    let delay = 0;
+    shots.slice(first).forEach((sh, k) => {
+      const offsetIn = k === 0 ? inShot : 0;
+      const dur = sh.dur - offsetIn;
+      cineTimers.push(setTimeout(() => {
+        c.classList.remove('fx-slam', 'fx-death', 'fx-revive', 'fx-dawn'); void c.offsetWidth;
+        const div = document.createElement('div'); div.className = 'shot';
+        if (sh.video && videos[sh.video]) {
+          const v = videos[sh.video];
+          try { v.currentTime = offsetIn / 1000; } catch (e) {}
+          div.appendChild(v);
+          const p = v.play(); if (p && p.catch) p.catch(() => { if (sh.poster) { div.innerHTML = `<img class="kb" style="--kbd:${dur}ms" src="${M(sh.poster + '.webp')}">`; } });
+        } else {
+          div.innerHTML = `<img class="kb" style="--kbd:${dur}ms" src="${M((sh.img || sh.poster) + '.webp')}" alt="">`;
+        }
+        box.appendChild(div);
+        requestAnimationFrame(() => { div.classList.add('on'); const prevs = box.querySelectorAll('.shot'); if (prevs.length > 1) setTimeout(() => prevs[0].remove(), 600); });
+        if (sh.fx) c.classList.add('fx-' + sh.fx);
+        typeText($('cineCap'), sh.cap || '');
+      }, delay));
+      delay += dur;
+    });
+    cineTimers.push(setTimeout(cineStop, delay));
+  }
+
+  // ---------- стартовый экран ----------
+  function setPhaseClass(ph) {
+    document.body.className = document.body.className.replace(/\bph-\S+/g, '').trim() + ' ph-' + ph;
+  }
+  function showHome(msg) {
+    setPhaseClass('home'); setBg('lobby'); setHost('');
+    $('home').classList.remove('hidden'); $('game').classList.add('hidden'); $('plist').classList.add('hidden');
+    $('roomchip').classList.add('hidden'); $('banner').classList.add('hidden');
+    $('homeErr').textContent = msg || '';
+    const saved = lsGet('checkin_name');
+    if (saved && !$('name').value) $('name').value = saved;
+    const urlRoom = new URLSearchParams(location.search).get('room');
+    if (urlRoom) { $('code').value = urlRoom.toUpperCase().slice(0, 4); $('orLine').textContent = 'или своя комната'; }
+  }
+  function startSession(s) {
+    session = s; lsSet(LS_KEY, s);
+    const u = new URL(location.href); u.searchParams.set('room', s.room); history.replaceState(null, '', u.toString());
+    $('home').classList.add('hidden'); $('game').classList.remove('hidden'); $('plist').classList.remove('hidden');
+    $('roomchip').classList.remove('hidden'); $('roomcode').textContent = s.room;
+    preload(); connect();
+  }
+  $('createBtn').onclick = async () => {
+    const name = $('name').value.trim();
+    if (!name) { $('homeErr').textContent = 'Сначала введите имя'; $('name').focus(); return; }
+    lsSet('checkin_name', name); $('createBtn').disabled = true;
+    const r = await api('create', { name }); $('createBtn').disabled = false;
+    if (r.error) { $('homeErr').textContent = r.error; return; }
+    startSession(r);
+  };
+  $('joinBtn').onclick = async () => {
+    const name = $('name').value.trim(); const room = $('code').value.trim().toUpperCase();
+    if (!name) { $('homeErr').textContent = 'Сначала введите имя'; $('name').focus(); return; }
+    if (room.length !== 4) { $('homeErr').textContent = 'Код комнаты — 4 буквы'; $('code').focus(); return; }
+    lsSet('checkin_name', name); $('joinBtn').disabled = true;
+    const r = await api('join', { name, room, spectator: $('spectator').checked }); $('joinBtn').disabled = false;
+    if (r.error) { $('homeErr').textContent = r.error; return; }
+    startSession(r);
+  };
+  $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('joinBtn').click(); });
+  $('leaveBtn').onclick = async () => {
+    const b = $('leaveBtn');
+    if (!b.dataset.armed) {
+      b.dataset.armed = '1'; b.textContent = 'Точно выйти? Нажми ещё раз';
+      setTimeout(() => { delete b.dataset.armed; b.textContent = 'Выйти из комнаты'; }, 3000);
+      return;
+    }
+    delete b.dataset.armed; b.textContent = 'Выйти из комнаты';
+    await act('leave'); if (es) es.close(); lsDel(LS_KEY); session = null; S = null; cineStop();
+    const u = new URL(location.href); u.searchParams.delete('room'); history.replaceState(null, '', u.toString());
+    showHome();
+  };
+
+  // ---------- связь ----------
+  function connect() {
+    if (es) es.close();
+    es = new EventSource(`/events?room=${encodeURIComponent(session.room)}&pid=${encodeURIComponent(session.pid)}`);
+    es.onmessage = (ev) => {
+      failCount = 0; $('banner').classList.add('hidden');
+      const st = JSON.parse(ev.data);
+      offset = st.now - Date.now();
+      const pk = `${st.phase}|${st.round}|${st.phaseAt}`;
+      if (pk !== phaseKey) { phaseKey = pk; phaseStart = st.phaseAt || st.now; }
+      S = st; render();
+    };
+    es.onerror = async () => {
+      failCount++; $('banner').classList.remove('hidden');
+      if (failCount >= 3) {
+        const r = await api('rejoin', session);
+        if (r.error && /не найдена|больше не/.test(r.error)) {
+          es.close(); lsDel(LS_KEY); session = null;
+          showHome('Комната закрылась (возможно, сервер перезапустился). Создайте новую.');
+        }
+      }
+    };
+  }
+
+  // ---------- рендер ----------
+  const P = (id) => S.players.find((p) => p.id === id);
+  const meP = () => P(S.me);
+  const gamersList = () => S.players.filter((p) => !p.spectator);
+  function av(p, cls = '') {
+    if (!p) return '';
+    if (p.avatar === 'tv' || typeof p.avatar !== 'number') return `<span class="av tv ${cls}" style="--c:${esc(p.color)}" title="${esc(p.name)}">📺</span>`;
+    const ghost = !p.spectator && !p.alive && S.phase !== 'lobby';
+    return `<span class="av ${ghost ? 'ghost' : ''} ${cls}" style="--c:${esc(p.color)}" title="${esc(p.name)}"><img src="${M('guest_' + p.avatar + '.webp')}" alt="" loading="lazy"></span>`;
+  }
+  function hostLine(text, pose) {
+    return text ? `<div class="host-line"><img class="bust" src="${M('host_' + (pose || 'base') + '.webp')}" alt=""><div>${esc(text)}</div></div>` : '';
+  }
+  const kicker = (l, r) => `<div class="kicker"><span>${l}</span><span>${r || ''}</span></div>`;
+  function whoList(ids) {
+    return `<div class="condemned">${ids.map((id) => { const p = P(id); return p ? `<div class="who">${av(p, 'lg')}<span>${esc(p.name)}</span></div>` : ''; }).join('')}</div>`;
+  }
+
+  function sceneFor(ph) {
+    if (ph === 'lobby' || ph === 'intro') return 'lobby';
+    if (ph === 'question' || ph === 'reveal') return 'quiz';
+    if (ph.startsWith('trial')) return 'basement';
+    if (ph.startsWith('finale')) return 'finale';
+    if (ph === 'gameover') return 'morning';
+    return 'lobby';
+  }
+  function hostFor(ph, d) {
+    if (ph === 'reveal') {
+      if (d.revived && d.revived.length) return 'base';
+      return Object.values(d.results || {}).some((r) => !r.ghost && !r.right) ? 'grin' : 'clap';
+    }
+    if (ph === 'trial_intro') return 'point';
+    if (ph === 'trial_result') return d.dead && d.dead.length ? 'grin' : 'base';
+    if (ph === 'finale_intro') return 'base';
+    if (ph === 'gameover') return 'clap';
+    return '';
+  }
+
+  function render() {
+    if (!S) return;
+    const d = S.data || {};
+    setPhaseClass(S.phase);
+    setBg(sceneFor(S.phase));
+    setHost(hostFor(S.phase, d));
+    runCutscenes(d);
+    renderPlayers();
+    renderStage();
+  }
+
+  function runCutscenes(d) {
+    const ph = S.phase, elapsed = serverNow() - phaseStart, key = phaseKey;
+    if (ph === 'intro') {
+      playCine(key, [
+        { video: 'intro_scene', poster: 'cs_intro_1', dur: 5000, cap: 'Полночь. Автобус с туристами сворачивает к старому отелю на скале…' },
+        { img: 'cs_intro_2', dur: 3200, cap: 'Двери захлопнулись за спиной.', fx: 'slam' },
+        { img: 'cs_intro_3', dur: 4300, cap: d.line || 'Добро пожаловать в отель «Последний чек-ин».' },
+      ], elapsed);
+    } else if (ph === 'reveal' && d.revived && d.revived.length) {
+      const names = d.revived.map((id) => (P(id) || {}).name).filter(Boolean).join(', ');
+      playCine(key, [{ img: 'cs_revive', dur: 2600, cap: `${names} находит ключ и возвращается к живым!`, fx: 'revive' }], elapsed);
+    } else if (ph === 'trial_result' && d.dead && d.dead.length) {
+      const names = d.dead.map((id) => (P(id) || {}).name).filter(Boolean).join(', ');
+      playCine(key, [{ img: 'cs_death', dur: 2600, cap: `${names}: пол уходит из-под ног…`, fx: 'death' }], elapsed);
+    } else if (ph === 'finale_intro') {
+      playCine(key, [{ img: 'cs_dawn', dur: 3600, cap: 'Шесть утра. Часы бьют рассвет. Бегите!', fx: 'dawn' }], elapsed);
+    } else if (ph === 'gameover') {
+      const w = P(d.winner);
+      if (w && w.pos >= S.cfg.exit) playCine(key, [{ video: 'escape_cutscene', poster: 'cs_escape', dur: 5000, cap: `${w.name} вырывается навстречу рассвету!` }], elapsed);
+    } else if (cineKey && cineKey !== key && $('cine').classList.contains('on')) {
+      cineStop();
+    }
+  }
+
+  function renderPlayers() {
+    const ph = S.phase;
+    const finale = ph.startsWith('finale') || ph === 'gameover';
+    const list = S.players.slice().sort((a, b) => (a.spectator - b.spectator) || (finale ? b.pos - a.pos : b.money - a.money));
+    const html = list.map((p) => {
+      let sub;
+      if (p.spectator) sub = 'зритель';
+      else if (ph === 'lobby') sub = p.host ? 'хозяин комнаты' : 'заселился';
+      else if (finale) sub = `🚪 ${p.pos}/${S.cfg.exit} · ${money(p.money)}`;
+      else sub = p.alive ? money(p.money) : `призрак · 🗝 ${p.keys}/${S.cfg.keys}`;
+      const cls = ['pl', p.id === S.me ? 'me' : '', p.online ? '' : 'off', !p.spectator && !p.alive && ph !== 'lobby' ? 'dead' : ''].join(' ');
+      return `<div class="${cls}">${av(p)}<div class="nm"><b>${esc(p.name)}${p.host ? ' 👑' : ''}</b><small>${p.online ? sub : 'не в сети'}</small></div>${p.acted ? '<span class="tick">✓</span>' : ''}</div>`;
+    }).join('');
+    if (html !== lastPlistHTML) { $('plist').innerHTML = html; lastPlistHTML = html; }
+    const me = meP();
+    $('meLine').textContent = me ? (me.spectator ? 'Вы зритель' : `Вы: ${me.name}`) : '';
+  }
+
+  function setStage(key, html, after) {
+    const el = $('stage');
+    if (key !== lastStageKey) {
+      el.innerHTML = `<div class="fade-in">${html}</div>`;
+      lastStageKey = key; lastStageHTML = html;
+      if (after) after(el, true);
+    } else if (html !== lastStageHTML) {
+      el.firstElementChild ? (el.firstElementChild.innerHTML = html) : (el.innerHTML = html);
+      lastStageHTML = html;
+      if (after) after(el, false);
+    }
+  }
+
+  function renderStage() {
+    const ph = S.phase, d = S.data || {}, me = meP();
+    const iPlay = me && !me.spectator;
+    const key = `${ph}|${S.round}|${d.type || ''}|${d.text || d.category || ''}`;
+
+    if (ph === 'lobby') {
+      const link = `${location.origin}/?room=${S.code}`;
+      const guests = gamersList();
+      const n = guests.filter((p) => p.online).length;
+      const book = guests.map((p) => `<div class="g">${av(p, 'lg')}<span>${esc(p.name)}${p.host ? ' 👑' : ''}</span></div>`).join('');
+      return setStage(key, `
+        ${kicker('Ресепшн', `${n} ${n === 1 ? 'гость' : n < 5 ? 'гостя' : 'гостей'}`)}
+        <h1 class="big">Ждём постояльцев</h1>
+        <p class="lead">Каждый открывает ссылку или вводит код комнаты на своём телефоне или компьютере.</p>
+        <div class="code-big">${esc(S.code)}</div>
+        <div class="share"><code>${esc(link)}</code><button class="btn btn-ghost" data-copy="${esc(link)}">Скопировать</button></div>
+        <div class="book"><h3>Книга постояльцев</h3><div class="row">${book}</div></div>
+        <div class="rules">
+          <div class="rule"><span>❓</span><div>Отвечай на вопросы: правильный ответ приносит монеты, быстрый — ещё больше.</div></div>
+          <div class="rule"><span>🕯️</span><div>Ошибся — спускаешься в подвал на испытание. Не прошёл — становишься призраком.</div></div>
+          <div class="rule"><span>👻</span><div>Призраки продолжают играть: ${S.cfg.keys} верных ответа дают ключи, и призрак воскресает.</div></div>
+          <div class="rule"><span>🚪</span><div>В финале все бегут к выходу. Первый у двери побеждает.</div></div>
+        </div>
+        ${S.isHost
+          ? `<button class="btn btn-primary wide" data-act="start" ${n < S.cfg.min ? 'disabled' : ''}>${n < S.cfg.min ? `Нужно минимум ${S.cfg.min} игрока` : 'Заселить гостей и начать'}</button>`
+          : `<div class="status">⏳ Начнёт хозяин комнаты, когда все соберутся.</div>`}`);
+    }
+
+    if (ph === 'intro') {
+      return setStage(key, `
+        ${kicker('Полночь', '')}
+        <h1 class="big">Двери отеля закрылись</h1>
+        <p class="lead">Впереди ${S.totalRounds} вопросов, подвал и побег на рассвете.</p>
+        ${hostLine(d.line, 'welcome')}`);
+    }
+
+    if (ph === 'question') {
+      const answered = gamersList().filter((p) => p.acted).length;
+      const total = gamersList().filter((p) => p.online).length;
+      const mine = d.myChoice;
+      const opts = d.options.map((o, i) => {
+        const cls = mine === null ? '' : mine === i ? 'mine' : 'dim';
+        const dis = !iPlay || mine !== null ? 'disabled' : '';
+        return `<button class="opt ${cls}" data-answer="${i}" ${dis}><span class="letter">${LETTERS[i]}</span><span>${esc(o)}</span></button>`;
+      }).join('');
+      const note = iPlay && !me.alive ? `<div class="notice">👻 Ты призрак. Правильный ответ даёт ключ (${me.keys}/${S.cfg.keys}). Соберёшь ${S.cfg.keys} — воскреснешь.</div>` : '';
+      return setStage(key, `
+        ${kicker(esc(d.category), `Вопрос ${S.round} из ${S.totalRounds}`)}
+        <h2 class="q">${esc(d.text)}</h2>
+        <div class="opts">${opts}</div>${note}
+        <div class="status">${mine !== null ? '✓ Ответ принят. ' : ''}Ответили: ${answered} из ${total}</div>`);
+    }
+
+    if (ph === 'reveal') {
+      const byOpt = d.options.map(() => []);
+      for (const [pid, r] of Object.entries(d.results)) if (r.choice !== null) byOpt[r.choice].push(pid);
+      const opts = d.options.map((o, i) => {
+        const cls = i === d.correct ? 'right' : byOpt[i].length ? 'wrong' : 'dim';
+        return `<div class="opt ${cls}"><span class="letter">${LETTERS[i]}</span><span>${esc(o)}</span><span class="who">${byOpt[i].map((id) => av(P(id))).join('')}</span></div>`;
+      }).join('');
+      const mr = d.results[S.me];
+      let mine = '';
+      if (mr) {
+        if (mr.ghost) mine = mr.right ? `<div class="notice">🗝 Ключ найден!</div>` : '';
+        else mine = mr.right ? `<div class="notice">Верно! +${money(mr.gain)}</div>` : `<div class="notice red">Неверно. Тебя ждёт подвал…</div>`;
+      }
+      const rev = (d.revived || []).map((id) => P(id)).filter(Boolean);
+      const revHtml = rev.length ? `<div class="notice">✨ Воскрес${rev.length > 1 ? 'ли' : '(ла)'}: ${rev.map((p) => esc(p.name)).join(', ')}</div>` : '';
+      return setStage(key, `
+        ${kicker(esc(d.category), `Вопрос ${S.round} из ${S.totalRounds}`)}
+        <h2 class="q">${esc(d.text)}</h2>
+        <div class="opts">${opts}</div>${mine}${revHtml}
+        ${hostLine(d.line, hostFor(ph, d))}`);
+    }
+
+    if (ph === 'trial_intro') {
+      const inIt = d.condemned.includes(S.me);
+      return setStage(key, `
+        ${kicker('Подвал', 'Испытание')}
+        <img class="trialimg" src="${M('trial_' + d.type + '.webp')}" alt="">
+        <h1 class="big">${esc(d.title)}</h1>
+        <p class="lead">${esc(d.rules)}</p>
+        <div class="status" style="margin-top:14px">В подвал спускаются:</div>
+        ${whoList(d.condemned)}
+        ${inIt ? '<div class="notice red">Это ты. Приготовься.</div>' : '<div class="notice">Ты в безопасности. Смотри и не вмешивайся.</div>'}`);
+    }
+
+    if (ph === 'trial_memo') {
+      return setStage(key, `
+        ${kicker('Подвал', esc(d.title))}
+        <h2 class="q">Запоминай порядок!</h2>
+        <div class="memo">${d.seq.map((s, i) => `<div><small>${i + 1}</small>${esc(s)}</div>`).join('')}</div>`);
+    }
+
+    if (ph === 'trial') {
+      const inIt = d.condemned.includes(S.me);
+      if (d.type === 'math') return renderMath(key, d, inIt);
+      const myPick = d.myPick;
+      let title, grid;
+      if (d.type === 'glass') {
+        title = inIt ? 'Выбери бокал' : 'Они выбирают бокалы…';
+        grid = `<div class="picks">${Array.from({ length: d.count }, (_, i) =>
+          `<button class="pickbtn ${myPick === i ? 'mine' : ''}" data-pick="${i}" ${!inIt || myPick !== null ? 'disabled' : ''}>🍷<small>Бокал ${i + 1}</small></button>`).join('')}</div>`;
+      } else if (d.type === 'elevator') {
+        title = inIt ? 'Выбери этаж' : 'Они выбирают этажи…';
+        grid = `<div class="picks floors">${Array.from({ length: d.count }, (_, i) =>
+          `<button class="pickbtn ${myPick === i ? 'mine' : ''}" data-pick="${i}" ${!inIt || myPick !== null ? 'disabled' : ''}>${i + 1}<small>этаж</small></button>`).join('')}</div>`;
+      } else {
+        title = `Какой символ был на ${d.position}-м месте?`;
+        grid = `<div class="picks" style="grid-template-columns:repeat(4,1fr)">${d.options.map((o, i) =>
+          `<button class="pickbtn ${myPick === i ? 'mine' : ''}" data-pick="${i}" ${!inIt || myPick !== null ? 'disabled' : ''}>${esc(o)}</button>`).join('')}</div>`;
+      }
+      const done = d.condemned.filter((id) => P(id) && P(id).acted).length;
+      return setStage(key, `
+        ${kicker('Подвал', esc(d.title))}
+        <h2 class="q">${title}</h2>${grid}
+        <div class="status">${myPick !== null ? '✓ Выбор сделан. ' : ''}Выбрали: ${done} из ${d.condemned.length}</div>`);
+    }
+
+    if (ph === 'trial_result') {
+      let body = '';
+      if (d.type === 'glass' || d.type === 'elevator') {
+        const by = {};
+        for (const [pid, v] of Object.entries(d.picks)) (by[v] = by[v] || []).push(pid);
+        const floors = d.type === 'elevator';
+        body = `<div class="picks ${floors ? 'floors' : ''}">${Array.from({ length: d.count }, (_, i) => {
+          const bad = i === d.bad, crowd = floors && (by[i] || []).length > 1;
+          const icon = floors ? (bad ? '💥' : crowd ? '⚠️' : i + 1) : bad ? '☠️' : '🍷';
+          return `<div class="pickbtn ${bad || crowd ? 'bad' : ''}">${icon}<small>${floors ? `${i + 1} этаж` : `Бокал ${i + 1}`}</small><span class="who">${(by[i] || []).map((id) => av(P(id))).join('')}</span></div>`;
+        }).join('')}</div>`;
+      } else if (d.type === 'math') {
+        const max = Math.max(1, ...Object.values(d.scores));
+        body = `${d.solo ? `<p class="lead">Нужно было решить ${d.need}.</p>` : ''}<div class="scoreboard">${Object.entries(d.scores).sort((a, b) => b[1] - a[1]).map(([pid, sc]) =>
+          `<div class="sbrow">${av(P(pid))}<div class="bar"><i style="width:${(sc / max) * 100}%"></i></div><b>${sc}</b></div>`).join('')}</div>`;
+      } else if (d.type === 'memory') {
+        body = `<p class="lead">Правильный ответ: ${d.position}-й символ.</p>
+          <div class="memo">${d.seq.map((s, i) => `<div class="${i + 1 === d.position ? 'hit' : ''}"><small>${i + 1}</small>${esc(s)}</div>`).join('')}</div>`;
+      }
+      const dead = d.dead.map((id) => P(id)).filter(Boolean);
+      const deadHtml = dead.length
+        ? `<div class="status">Не пережили ночь:</div><div class="deadlist">${dead.map((p) => `<div class="who">${av(p, 'lg')}<span>${esc(p.name)}</span></div>`).join('')}</div>`
+        : `<span class="stamp ok">ВСЕ ВЫЖИЛИ</span>`;
+      return setStage(key, `
+        ${kicker('Подвал', esc(d.title))}
+        ${body}
+        <div style="margin-top:14px">${deadHtml}</div>
+        ${d.dead.includes(S.me) ? '<div class="notice">👻 Теперь ты призрак. Не сдавайся: отвечай верно, собирай ключи и возвращайся.</div>' : ''}
+        ${hostLine(d.line, hostFor(ph, d))}`, (el, fresh) => { if (fresh && dead.length) el.firstElementChild.classList.add('shake'); });
+    }
+
+    if (ph === 'finale_intro') {
+      return setStage(key, `
+        ${kicker('Рассвет', 'Финал')}
+        <h1 class="big">Побег из отеля</h1>
+        <p class="lead">Выход на ${d.exit}-й клетке. Живые стартуют впереди, у самого богатого ещё шаг форы, призраки начинают с нуля.
+        В каждом вопросе отметь все подходящие варианты: верная отметка даёт шаг вперёд, ошибочная отнимает шаг.</p>
+        ${track()}
+        ${hostLine(d.line, 'base')}`);
+    }
+    if (ph === 'finale_q') {
+      const fkey = `${S.round}|${d.category}`;
+      if (fkey !== finaleDraftKey) { finaleDraftKey = fkey; finaleDraft = new Set(); }
+      const sent = d.myPicks;
+      const items = d.items.map((it, i) => {
+        const on = sent ? sent.includes(i) : finaleDraft.has(i);
+        return `<button class="fitem ${on ? 'on' : ''}" data-fitem="${i}" ${!iPlay || sent ? 'disabled' : ''}>${on ? '✓ ' : ''}${esc(it)}</button>`;
+      }).join('');
+      const done = gamersList().filter((p) => p.acted).length;
+      const total = gamersList().filter((p) => p.online).length;
+      return setStage(key, `
+        ${kicker('Побег', `Шаг ${d.num} из ${d.max}`)}
+        <h2 class="q">Отметь всё, что подходит:<br>${esc(d.category)}</h2>
+        <div class="fitems">${items}</div>
+        ${iPlay && !sent ? `<button class="btn btn-primary wide" style="margin-top:14px" data-act="finale">Готово</button>` : ''}
+        <div class="status">${sent ? '✓ Ответ принят. ' : ''}Ответили: ${done} из ${total}</div>
+        ${track()}`);
+    }
+    if (ph === 'finale_reveal') {
+      const items = d.items.map((it) => `<div class="fitem ${it.ok ? 'yes' : 'no'}">${it.ok ? '✓' : '✗'} ${esc(it.label)}</div>`).join('');
+      const mv = Object.entries(d.moves).sort((a, b) => b[1].delta - a[1].delta).map(([pid, m]) => {
+        const p = P(pid); if (!p) return '';
+        return `<div class="mv">${av(p)}<span>${esc(p.name)}</span><b>${m.delta ? `+${m.delta} ${m.delta === 1 ? 'шаг' : m.delta < 5 ? 'шага' : 'шагов'}` : 'на месте'}</b></div>`;
+      }).join('');
+      return setStage(key, `
+        ${kicker('Побег', `Шаг ${d.num} из ${d.max}`)}
+        <h2 class="q">${esc(d.category)}</h2>
+        <div class="fitems">${items}</div>
+        <div class="moves">${mv}</div>
+        ${track()}`);
+    }
+
+    if (ph === 'gameover') {
+      const w = P(d.winner);
+      const escaped = w && w.pos >= S.cfg.exit;
+      const rank = d.ranking.map((id, i) => {
+        const p = P(id); if (!p) return '';
+        return `<div class="r"><span class="place">${i + 1}</span>${av(p)}<b>${esc(p.name)}</b><small>клетка ${p.pos}<br>${money(p.money)}</small></div>`;
+      }).join('');
+      const portrait = w && typeof w.avatar === 'number' ? `<div class="portrait"><img src="${M('guest_' + w.avatar + '_full.webp')}" alt=""></div>` : (w ? av(w, 'xl') : '');
+      return setStage(key, `
+        ${kicker('Утро', 'Итоги')}
+        <div class="winner">
+          ${portrait}
+          <h1 class="big">${!w ? 'Никто не сбежал' : escaped ? `${esc(w.name)} сбегает из отеля!` : `${esc(w.name)} ближе всех к выходу`}</h1>
+          <p class="lead" style="margin:0 auto">${escaped ? 'Остальные остаются постояльцами. Навсегда.' : 'До двери не добежал никто, но кто-то был очень близко.'}</p>
+        </div>
+        <div class="rank">${rank}</div>
+        ${hostLine(escaped ? d.line : 'Никто не выехал. Отель благодарит вас за проживание… бессрочное.', 'clap')}
+        ${S.isHost ? `<button class="btn btn-primary wide" style="margin-top:18px" data-act="restart">Сыграть ещё раз</button>` : '<div class="status">Хозяин комнаты может начать новую игру.</div>'}`);
+    }
+
+    setStage(key, `<p class="lead">Загрузка…</p>`);
+  }
+
+  function renderMath(key, d, inIt) {
+    const el = $('stage'); const mkey = key + '|math';
+    if (lastStageKey !== mkey) {
+      el.innerHTML = `<div class="fade-in">${kicker('Подвал', esc(d.title))}<div id="mathArea"></div><div class="scoreboard" id="mathScores"></div></div>`;
+      lastStageKey = mkey; lastStageHTML = '';
+      if (inIt) {
+        $('mathArea').innerHTML = `
+          <div class="math">
+            <p class="lead">${d.solo ? `Реши хотя бы ${d.need} примеров` : 'Кто решит меньше всех, остаётся в подвале'}</p>
+            <div class="ex" id="mathEx"></div>
+            <form id="mathForm" autocomplete="off"><input class="field" id="mathIn" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="?"><button class="btn btn-primary">OK</button></form>
+            <div class="fb" id="mathFb"></div>
+          </div>`;
+        $('mathForm').onsubmit = async (e) => {
+          e.preventDefault();
+          const inp = $('mathIn'); const v = inp.value.trim(); if (!v) return;
+          inp.value = '';
+          const r = await act('math', { answer: v, idx: S.data.myIdx });
+          const fb = $('mathFb');
+          if (fb) { fb.textContent = r.error === 'wrong' ? '✗ мимо' : '✓'; fb.style.color = r.error === 'wrong' ? '#ff8b9b' : 'var(--ok)'; }
+        };
+        setTimeout(() => $('mathIn') && $('mathIn').focus(), 50);
+      } else {
+        $('mathArea').innerHTML = `<h2 class="q">Они считают на скорость…</h2>`;
+      }
+    }
+    if (inIt && $('mathEx')) $('mathEx').textContent = `${d.myProblem || ''} =`;
+    const max = Math.max(1, ...Object.values(d.scores || {}));
+    const html = Object.entries(d.scores || {}).map(([pid, sc]) =>
+      `<div class="sbrow">${av(P(pid))}<div class="bar"><i style="width:${(sc / max) * 100}%"></i></div><b>${sc}</b></div>`).join('');
+    const sb = $('mathScores'); if (sb && sb.innerHTML !== html) sb.innerHTML = html;
+  }
+
+  function track() {
+    const exit = S.cfg.exit, cells = [], players = gamersList();
+    for (let i = 0; i <= exit; i++) {
+      const here = players.filter((p) => Math.min(p.pos, exit) === i);
+      cells.push(i === exit
+        ? `<div class="cell door">🚪${here.map((p) => av(p)).join('')}</div>`
+        : `<div class="cell"><span class="n">${i}</span>${here.map((p) => av(p)).join('')}</div>`);
+    }
+    return `<div class="track"><div class="cells" style="grid-template-columns:repeat(${exit + 1},1fr)">${cells.join('')}</div>
+      <div class="legend">Коридор к выходу · дверь на клетке ${exit}</div></div>`;
+  }
+
+  // ---------- клики ----------
+  $('stage').addEventListener('click', async (e) => {
+    const t = e.target.closest('button,[data-copy]');
+    if (!t || t.disabled) return;
+    if (t.dataset.copy) {
+      try { await navigator.clipboard.writeText(t.dataset.copy); toast('Ссылка скопирована'); } catch (err) { toast('Скопируйте ссылку вручную'); }
+      return;
+    }
+    if (t.dataset.answer !== undefined) {
+      t.classList.add('mine'); document.querySelectorAll('[data-answer]').forEach((b) => (b.disabled = true));
+      return act('answer', { choice: Number(t.dataset.answer) });
+    }
+    if (t.dataset.pick !== undefined) {
+      t.classList.add('mine'); document.querySelectorAll('[data-pick]').forEach((b) => (b.disabled = true));
+      return act('pick', { value: Number(t.dataset.pick) });
+    }
+    if (t.dataset.fitem !== undefined) {
+      const i = Number(t.dataset.fitem);
+      finaleDraft.has(i) ? finaleDraft.delete(i) : finaleDraft.add(i);
+      lastStageHTML = ''; return render();
+    }
+    if (t.dataset.act === 'finale') { t.disabled = true; return act('finale', { picks: [...finaleDraft] }); }
+    if (t.dataset.act) { t.disabled = true; const r = await act(t.dataset.act); if (r.error) t.disabled = false; }
+  });
+
+  // ---------- таймер ----------
+  function tick() {
+    const bar = $('timer');
+    if (S && S.deadline) {
+      const left = Math.max(0, S.deadline - serverNow());
+      const total = Math.max(1, S.deadline - phaseStart);
+      bar.classList.remove('hidden');
+      $('timerBar').style.transform = `scaleX(${Math.min(1, left / total)})`;
+    } else bar.classList.add('hidden');
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // ---------- запуск ----------
+  (async () => {
+    setBg('lobby');
+    const saved = lsGet(LS_KEY);
+    const urlRoom = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
+    if (saved && (!urlRoom || urlRoom === saved.room)) {
+      const r = await api('rejoin', saved);
+      if (!r.error) return startSession(saved);
+      lsDel(LS_KEY);
+    }
+    showHome();
+  })();
+})();
+</script>
+</body>
+</html>
