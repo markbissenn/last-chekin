@@ -17,22 +17,28 @@ const crypto = require('crypto');
 // НАСТРОЙКИ: можно менять числа
 // ---------------------------------------------------------------
 const CFG = {
-  QUESTIONS: 8,          // вопросов в основной части
-  INTRO: 13,             // длина вступительной катсцены
+  QUESTIONS: Number(process.env.QN) || 8, // вопросов в основной части
+  INTRO: 16,             // длина вступительной катсцены
+  RULES: 29,             // объяснение общих правил перед первым вопросом
   Q_TIME: 20,            // секунд на вопрос
-  REVEAL_TIME: 7,        // показ правильного ответа
-  TRIAL_INTRO: 7,        // объяснение испытания
+  REVEAL_TIME: 9.5,      // показ правильного ответа (успевает прозвучать реплика портье)
+  TRIAL_INTRO: 13,       // объяснение испытания
   TRIAL_TIME: 15,        // выбор в испытании (бокал, лифт, память)
   MATH_TIME: 25,         // испытание «Счёт»
   MATH_SOLO_NEED: 6,     // сколько примеров надо решить, если в подвале один
   MEMO_SHOW: 5,          // сколько секунд показывать символы в «Памяти»
-  RESULT_TIME: 8,        // итоги испытания
-  FINALE_INTRO: 10,      // объяснение финала
+  RESULT_TIME: 8,        // итоги испытания (если кто-то погиб, +4 секунды на объяснение призракам)
+  FINALE_INTRO: 24,      // объяснение финала с анимацией
+  DARK_INTRO: 18,        // появление Тьмы перед первым вопросом финала
+  DARK_STEP: 1,          // на сколько клеток Тьма продвигается после каждого вопроса финала
+  SPEED_BONUS: 1,        // лишний шаг самому быстрому в финале
   FINALE_Q_TIME: 20,     // вопрос финала
   FINALE_REVEAL: 7,      // итоги вопроса финала
-  MAX_FINALE: 8,         // максимум вопросов в финале
+  MAX_FINALE: 12,        // предел вопросов в финале (Тьма доползает до двери раньше)
   EXIT: 10,              // на какой клетке выход
-  KEYS_TO_REVIVE: 3,     // сколько ключей нужно призраку, чтобы воскреснуть
+  KEYS_TO_REVIVE: Number(process.env.KEYS) || 3, // сколько ключей нужно призраку, чтобы забрать чужую жизнь
+  POSSESS_TIME: 12,      // сколько секунд призрак выбирает, чью жизнь забрать
+  POSSESS_RESULT: 7,     // показ, кто чью жизнь забрал
   MONEY: 1000,           // монет за правильный ответ (+ до 500 за скорость)
   MIN_PLAYERS: 2,
   MAX_PLAYERS: 12,
@@ -82,26 +88,47 @@ const LINES = {
     'О, у нас гости для подвала. Обожаю этот момент.',
   ],
   death_many: [
-    'Сразу несколько номеров освободилось. Горничная в ярости.',
-    'Подвал сегодня сыт. Новые призраки, добро пожаловать.',
+    'Массовый выезд. Обожаю сезон распродаж.',
+    'Столько свободных номеров сразу. Пора поднимать цены.',
+    'Кажется, у нас групповой тур. В один конец.',
+    'Подвал сегодня сыт. Остальных прошу не расслабляться.',
   ],
   death: [
-    'Минус один постоялец. Номер освободился.',
-    'Не волнуйтесь, призраки у нас тоже играют. Просто тише.',
-    'Ох. Горничной будет работы.',
-    'Выезд оформлен. Навсегда.',
+    'Ваш чек-аут оформлен. Чаевые оставьте в подвале.',
+    'Ещё один гость решил остаться у нас навсегда. Надеюсь, отзыв будет на пять звёзд.',
+    'Вы так уверенно ответили. Так же уверенно и упали.',
+    'Какая жалость. Хотя нет. Совсем не жалость.',
+    'Горничная просила передать: следующего она отмывать не будет.',
+    'Не грустите. Призраком вы будете смотреться гораздо интереснее.',
   ],
   survive: [
     'Все выжили. Повезло. В следующий раз будет иначе.',
     'Хм. Живучие попались.',
   ],
-  revive: ['Призрак нашёл ключи и вернулся в мир живых. Не привыкай.'],
+  revive: ['Призрак забрал чужую жизнь и вернулся к живым. Не привыкай.'],
+  rules: ['Правила простые. На каждый вопрос двадцать секунд. Ответили верно — получаете монеты, и чем быстрее, тем больше. Ошиблись — спускаетесь со мной в подвал на испытание. Не прошли его — становитесь призраком. Но призраки продолжают играть. А на рассвете все бегут к выходу. Кто первым доберётся до двери, тот покинет мой отель.'],
+  ghost: ['Ты теперь призрак. Но игра для тебя не закончилась. Отвечай на вопросы: за каждый верный ответ получишь ключ. Собери три ключа — и сможешь забрать жизнь любого живого постояльца. А на рассвете призраки тоже бегут к выходу.'],
+  possess: ['Три ключа собраны. Выбирай, чью жизнь заберёшь.'],
+  finale_rules: ['Финал. Я покажу категорию и четыре варианта. Отметьте все, что подходят: верных может быть несколько. Каждая верная отметка — шаг вперёд, каждая ошибочная — шаг назад. Выбрали — нажимайте «Готово». Кто первым дойдёт до двери, тот сбежал.'],
   finale: [
     'Утро близко. Бегите к выходу. Только помните: призраки бегут тоже.',
   ],
   win: ['Кто-то всё-таки выехал из отеля. Остальных я жду в следующий раз.'],
+  dark_rules: ['И ещё кое-что. Из подвала за вами ползёт Тьма. После каждого вопроса она съедает клетку коридора. Кого догонит — останется в отеле навсегда. Так что отвечайте быстро: самый быстрый получает лишний шаг.'],
+  dark_catch: [
+    'Тьма сегодня не привередлива. Минус один бегун.',
+    'Слышите хруст? Это был кто-то из ваших.',
+    'Медленно бежали. Тьма таких любит.',
+  ],
+  dark_all: ['Тьма съела всех. Отель снова пуст… до следующего автобуса.'],
+  win_none: ['Никто не выехал. Отель благодарит вас за проживание… бессрочное.'],
 };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+// Реплика портье и её код для файла озвучки: media/vo/<код>.mp3, например intro_2.mp3
+function say(group) {
+  const i = Math.floor(Math.random() * LINES[group].length);
+  return { line: LINES[group][i], lineId: `${group}_${i + 1}` };
+}
 const randInt = (n) => Math.floor(Math.random() * n);
 function shuffle(a) {
   const arr = a.slice();
@@ -222,6 +249,7 @@ function acted(room, p) {
       if (room.pub.type === 'math') return false;
       return pr.picks.has(p.id);
     case 'finale_q':
+    case 'possess':
       return pr.picks.has(p.id);
     default:
       return false;
@@ -239,6 +267,7 @@ function view(room, me) {
     money: p.money,
     keys: p.keys,
     pos: p.pos,
+    eaten: !!p.eaten,
     online: p.conns > 0,
     host: p.id === room.hostId,
     acted: acted(room, p),
@@ -249,6 +278,9 @@ function view(room, me) {
   if (room.phase === 'question') {
     const a = pr.answers.get(me.id);
     data.myChoice = a ? a.choice : null;
+  } else if (room.phase === 'possess') {
+    const t = pr.picks.get(me.id);
+    data.myPick = t ? room.players.get(t).pub : null;
   } else if (room.phase === 'trial') {
     if (room.pub.type === 'math') {
       const prog = pr.prog.get(me.id);
@@ -347,11 +379,13 @@ async function runGame(room) {
     p.money = 0;
     p.keys = 0;
     p.pos = 0;
+    p.eaten = false;
   }
   room.round = 0;
   room.lastTrial = null;
 
-  if (!(await phase(room, tk, 'intro', { line: pick(LINES.intro) }, {}, sec(CFG.INTRO)))) return;
+  if (!(await phase(room, tk, 'intro', say('intro'), {}, sec(CFG.INTRO)))) return;
+  if (!(await phase(room, tk, 'rules', { keys: CFG.KEYS_TO_REVIVE, ...say('rules') }, {}, sec(CFG.RULES)))) return;
 
   for (let r = 1; r <= CFG.QUESTIONS; r++) {
     room.round = r;
@@ -374,7 +408,7 @@ async function runGame(room) {
     if (!ok) return;
 
     const results = {};
-    const revived = [];
+    const keyed = []; // призраки, собравшие все ключи
     const condemned = [];
     for (const p of gamers(room)) {
       const a = answers.get(p.id);
@@ -389,32 +423,62 @@ async function runGame(room) {
           condemned.push(p);
         }
       } else if (right) {
-        p.keys += 1;
-        if (p.keys >= CFG.KEYS_TO_REVIVE) {
-          p.alive = true;
-          p.keys = 0;
-          revived.push(p.pub);
-        }
+        p.keys = Math.min(CFG.KEYS_TO_REVIVE, p.keys + 1);
+        if (p.keys >= CFG.KEYS_TO_REVIVE) keyed.push(p);
       }
       results[p.pub] = { choice: a ? a.choice : null, right, gain, ghost: !aliveAtStart.has(p.id) };
     }
-    let line = condemned.length ? pick(LINES.reveal_some) : pick(LINES.reveal_all);
-    if (revived.length) line = pick(LINES.revive);
+    const said = condemned.length ? say('reveal_some') : say('reveal_all');
     if (
       !(await phase(
         room, tk, 'reveal',
-        { category: q.category || 'Вопрос', text: q.text, options, correct, results, revived, line },
+        { category: q.category || 'Вопрос', text: q.text, options, correct, results, keyed: keyed.map((p) => p.pub), ...said },
         {}, sec(CFG.REVEAL_TIME)
       ))
     )
       return;
 
+    if (keyed.length) {
+      const victims = await runPossess(room, tk, keyed);
+      if (!victims) return;
+      // у кого забрали жизнь, тот уже призрак и в подвал не идёт
+      for (let i = condemned.length - 1; i >= 0; i--) if (!condemned[i].alive) condemned.splice(i, 1);
+    }
     if (condemned.length) {
       if (!(await runTrial(room, tk, condemned))) return;
     }
   }
 
   if (!(await runFinale(room, tk))) return;
+}
+
+// Призраки с тремя ключами забирают жизнь живого игрока
+async function runPossess(room, tk, keyed) {
+  const living = () => gamers(room).filter((p) => p.alive);
+  const picks = new Map();
+  const isKeyed = (id) => keyed.some((g) => g.id === id);
+  if (living().length) {
+    const ok = await phase(room, tk, 'possess',
+      { ghosts: keyed.map((g) => g.pub), targets: living().map((p) => p.pub), ...say('possess') },
+      { picks, isKeyed },
+      sec(CFG.POSSESS_TIME),
+      () => keyed.filter((g) => g.conns > 0).every((g) => picks.has(g.id)));
+    if (!ok) return null;
+  }
+  const pairs = [];
+  const taken = new Set();
+  for (const g of shuffle(keyed)) {
+    let victim = picks.has(g.id) ? room.players.get(picks.get(g.id)) : null;
+    if (!victim || !victim.alive || taken.has(victim.id)) {
+      // жертвой не может стать другой призрак, который воскресает в этот же момент
+      victim = shuffle(living().filter((p) => !taken.has(p.id) && !isKeyed(p.id)))[0] || null;
+    }
+    g.alive = true; g.keys = 0;
+    if (victim) { victim.alive = false; victim.keys = 0; taken.add(victim.id); }
+    pairs.push({ ghost: g.pub, victim: victim ? victim.pub : null });
+  }
+  const ok = await phase(room, tk, 'possess_result', { pairs, ...say('revive') }, {}, sec(CFG.POSSESS_RESULT));
+  return ok ? pairs : null;
 }
 
 async function runTrial(room, tk, condemned) {
@@ -526,57 +590,75 @@ async function runTrial(room, tk, condemned) {
   }
 
   for (const p of dead) p.alive = false;
+  const resultTime = CFG.RESULT_TIME + (dead.length ? 4 : 0);
   return phase(room, tk, 'trial_result',
     {
       type, title: info.title, condemned: ids, dead: dead.map((p) => p.pub),
-      line: dead.length > 1 ? pick(LINES.death_many) : dead.length ? pick(LINES.death) : pick(LINES.survive),
+      ...(dead.length > 1 ? say('death_many') : dead.length ? say('death') : say('survive')),
       ...extra,
     },
-    {}, sec(CFG.RESULT_TIME));
+    {}, sec(resultTime));
 }
 
 async function runFinale(room, tk) {
   const players = gamers(room);
   const alive = players.filter((p) => p.alive);
-  for (const p of players) p.pos = p.alive ? 3 : 0;
+  for (const p of players) { p.pos = p.alive ? 3 : 0; p.eaten = false; }
   if (alive.length) {
     const richest = alive.reduce((a, b) => (b.money > a.money ? b : a));
     richest.pos += 1;
   }
   room.round = 0;
+  let dark = -2; // последняя клетка, которую съела Тьма (отрицательная = ещё ни одной; первый ход — фора)
   if (
     !(await phase(room, tk, 'finale_intro',
-      { exit: CFG.EXIT, line: pick(LINES.finale) }, {}, sec(CFG.FINALE_INTRO)))
+      { exit: CFG.EXIT, ...say('finale'), rulesId: 'finale_rules_1' }, {}, sec(CFG.FINALE_INTRO)))
   )
     return false;
+  if (!(await phase(room, tk, 'dark_intro', { exit: CFG.EXIT, dark, ...say('dark_rules') }, {}, sec(CFG.DARK_INTRO)))) return false;
 
+  const runners = () => gamers(room).filter((p) => !p.eaten && p.pos < CFG.EXIT);
   for (let i = 0; i < CFG.MAX_FINALE; i++) {
     room.round = i + 1;
     const fq = drawFrom(FINALE, room.usedF);
     const items = shuffle(fq.items);
     const picks = new Map();
+    const times = new Map();
     if (
       !(await phase(room, tk, 'finale_q',
-        { category: fq.category, items: items.map((it) => it.label), exit: CFG.EXIT, num: i + 1, max: CFG.MAX_FINALE },
-        { picks, n: items.length },
+        { category: fq.category, items: items.map((it) => it.label), exit: CFG.EXIT, num: i + 1, max: CFG.MAX_FINALE, dark },
+        { picks, times, n: items.length },
         sec(CFG.FINALE_Q_TIME),
-        () => connectedGamers(room).every((p) => picks.has(p.id))))
+        () => runners().filter((p) => p.conns > 0).every((p) => picks.has(p.id))))
     )
       return false;
     const moves = {};
-    for (const p of gamers(room)) {
+    for (const p of runners()) {
       const sel = picks.get(p.id) || [];
       let d = 0;
       for (const k of sel) d += items[k].ok ? 1 : -1;
-      d = Math.max(0, d);
-      p.pos = Math.min(CFG.EXIT, p.pos + d);
-      moves[p.pub] = { picks: sel, delta: d };
+      moves[p.pub] = { picks: sel, delta: Math.max(0, d), bonus: 0 };
     }
-    const done = gamers(room).some((p) => p.pos >= CFG.EXIT);
+    // самый быстрый из тех, кто продвинулся, получает лишний шаг
+    const fastest = runners()
+      .filter((p) => moves[p.pub].delta > 0 && times.has(p.id))
+      .sort((a, b) => times.get(a.id) - times.get(b.id))[0];
+    if (fastest) moves[fastest.pub].bonus = CFG.SPEED_BONUS;
+    for (const p of runners()) {
+      const m = moves[p.pub];
+      p.pos = Math.min(CFG.EXIT, p.pos + m.delta + m.bonus);
+    }
+    // Тьма съедает ещё одну клетку
+    dark = Math.min(CFG.EXIT - 1, dark + CFG.DARK_STEP);
+    const caught = runners().filter((p) => p.pos <= dark);
+    for (const p of caught) p.eaten = true;
+    const done = gamers(room).some((p) => p.pos >= CFG.EXIT) || runners().length === 0;
+    const said = caught.length ? say('dark_catch') : {};
     if (
       !(await phase(room, tk, 'finale_reveal',
-        { category: fq.category, items: items.map((it) => ({ label: it.label, ok: !!it.ok })), moves, exit: CFG.EXIT, num: i + 1, max: CFG.MAX_FINALE },
-        {}, sec(CFG.FINALE_REVEAL)))
+        { category: fq.category, items: items.map((it) => ({ label: it.label, ok: !!it.ok })), moves, exit: CFG.EXIT, num: i + 1, max: CFG.MAX_FINALE,
+          dark, caught: caught.map((p) => p.pub), ...said },
+        {}, sec(CFG.FINALE_REVEAL + (caught.length ? 2 : 0))))
     )
       return false;
     if (done) break;
@@ -584,10 +666,13 @@ async function runFinale(room, tk) {
 
   const ranking = gamers(room)
     .slice()
-    .sort((a, b) => b.pos - a.pos || b.money - a.money)
+    .sort((a, b) => (b.pos >= CFG.EXIT) - (a.pos >= CFG.EXIT) || a.eaten - b.eaten || b.pos - a.pos || b.money - a.money)
     .map((p) => p.pub);
   room.round = 0;
-  await phase(room, tk, 'gameover', { ranking, winner: ranking[0], line: pick(LINES.win) }, {}, 0);
+  const first = byPub(room, ranking[0]);
+  const allEaten = gamers(room).every((p) => p.eaten);
+  const said = first && first.pos >= CFG.EXIT ? say('win') : allEaten ? say('dark_all') : say('win_none');
+  await phase(room, tk, 'gameover', { ranking, winner: ranking[0], dark, allEaten, ...said }, {}, 0);
   return true;
 }
 
@@ -614,7 +699,7 @@ function handleAction(room, p, body) {
     room.deadline = null;
     room.round = 0;
     for (const g of gamers(room)) {
-      g.alive = true; g.money = 0; g.keys = 0; g.pos = 0;
+      g.alive = true; g.money = 0; g.keys = 0; g.pos = 0; g.eaten = false;
     }
     // убираем тех, кто ушёл совсем
     for (const [id, g] of room.players) if (g.conns === 0 && id !== room.hostId) room.players.delete(id);
@@ -629,6 +714,18 @@ function handleAction(room, p, body) {
     return null;
   }
   if (p.spectator) return 'Зрители не играют';
+
+  if (t === 'avatar') {
+    if (room.phase !== 'lobby') return 'Сменить постояльца можно только до начала игры';
+    const a = Number(body.avatar);
+    if (!AVATARS.includes(a)) return 'Такого постояльца нет';
+    if (a === p.avatar) return null;
+    const taken = [...room.players.values()].some((x) => x !== p && x.avatar === a);
+    if (taken) return 'Этот постоялец уже занят';
+    p.avatar = a;
+    broadcast(room);
+    return null;
+  }
 
   if (t === 'answer' && room.phase === 'question') {
     const c = Number(body.choice);
@@ -650,8 +747,18 @@ function handleAction(room, p, body) {
     prog.idx = Math.min(prog.idx + 1, pr.problems.length - 1);
     broadcast(room);
     return right ? null : 'wrong';
+  } else if (t === 'possess' && room.phase === 'possess') {
+    if (!pr.isKeyed(p.id)) return 'Выбирают только призраки с тремя ключами';
+    if (pr.picks.has(p.id)) return 'Выбор уже сделан';
+    const target = byPub(room, String(body.target));
+    if (!target || target.spectator || !target.alive) return 'Этот игрок не может стать жертвой';
+    if ([...pr.picks.values()].includes(target.id)) return 'Эту жизнь уже забирает другой призрак';
+    pr.picks.set(p.id, target.id);
   } else if (t === 'finale' && room.phase === 'finale_q') {
+    if (p.eaten) return 'Тьма уже поглотила тебя';
+    if (p.pos >= CFG.EXIT) return 'Ты уже снаружи';
     if (pr.picks.has(p.id)) return 'Ответ уже принят';
+    pr.times.set(p.id, Date.now());
     const sel = Array.isArray(body.picks) ? body.picks.map(Number) : [];
     const uniq = [...new Set(sel)].filter((k) => Number.isInteger(k) && k >= 0 && k < pr.n);
     pr.picks.set(p.id, uniq);
@@ -682,7 +789,12 @@ function sendJSON(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(obj));
 }
-const MEDIA_TYPES = { '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png', '.mp4': 'video/mp4' };
+const MEDIA_TYPES = {
+  '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png', '.mp4': 'video/mp4',
+  '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
+};
+const MEDIA_SUBDIRS = ['vo', 'music'];
+const AUDIO_EXT = ['.mp3', '.m4a', '.ogg', '.wav'];
 // Отдаёт файл с кэшированием и поддержкой перемотки видео (Range)
 function sendFile(req, res, file, type) {
   const size = fs.statSync(file).size;
@@ -714,14 +826,31 @@ const server = http.createServer(async (req, res) => {
       return res.end(html);
     }
     if (req.method === 'GET' && url.pathname.startsWith('/media/')) {
-      const name = path.basename(decodeURIComponent(url.pathname));
+      // допускаем только media/<файл> и media/vo|music/<файл>
+      const parts = decodeURIComponent(url.pathname).split('/').filter(Boolean).slice(1);
+      const sub = parts.length === 2 && MEDIA_SUBDIRS.includes(parts[0]) ? parts[0] : '';
+      const name = path.basename(parts[parts.length - 1] || '');
       const type = MEDIA_TYPES[path.extname(name).toLowerCase()];
-      const file = path.join(ROOT, 'media', name);
+      const file = path.join(ROOT, 'media', sub, name);
       if (!type || !fs.existsSync(file)) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
         return res.end('not found');
       }
       return sendFile(req, res, file, type);
+    }
+    if (req.method === 'GET' && url.pathname === '/media-list') {
+      // какие файлы озвучки и музыки загружены: игра включает только их
+      const list = {};
+      for (const sub of MEDIA_SUBDIRS) {
+        try {
+          list[sub] = fs.readdirSync(path.join(ROOT, 'media', sub)).filter((f) => AUDIO_EXT.includes(path.extname(f).toLowerCase()));
+        } catch (e) { list[sub] = []; }
+      }
+      return sendJSON(res, 200, list);
+    }
+    if (req.method === 'GET' && url.pathname === '/sound.js') {
+      res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' });
+      return res.end(fs.readFileSync(path.join(ROOT, 'sound.js')));
     }
     if (req.method === 'GET' && url.pathname === '/health') {
       return sendJSON(res, 200, { ok: true, rooms: rooms.size });
